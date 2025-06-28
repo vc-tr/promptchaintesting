@@ -1,0 +1,19 @@
+# Python version requirement
+# Requires Python 3.7+
+
+# Python packages
+requests>=2.31.0
+
+# System dependencies (install separately):
+# - Docker Desktop or Docker Engine
+# - Docker Compose (included with Docker Desktop)
+# 
+# For macOS:
+#   brew install --cask docker
+# 
+# For Linux:
+#   https://docs.docker.com/engine/install/
+# 
+# Verify installation:
+#   docker --version
+#   docker-compose --version 
