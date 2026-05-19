@@ -1,0 +1,23 @@
+id: author_release_notes
+prompt: "Draft release notes for FOO v2.3 based on issues completed in the last sprint."
+suites: [all, author]
+max_steps: 8
+expected_tools:
+  - jira_search_issues
+  - confluence_create_page
+success_criteria: "tools_called:jira_search_issues,confluence_create_page"
+scripted_responses:
+  - text: "Let me find completed issues from the last sprint."
+    tool_calls:
+      - id: tc1
+        name: jira_search_issues
+        arguments: {jql: "project = FOO AND sprint in closedSprints() AND status = Done ORDER BY priority"}
+  - text: "Now I'll create the release notes page."
+    tool_calls:
+      - id: tc2
+        name: confluence_create_page
+        arguments:
+          space: ENG
+          title: "FOO v2.3 Release Notes"
+          body: "<h1>FOO v2.3 Release Notes</h1><h2>Features</h2><ul><li>New dashboard</li></ul><h2>Bug Fixes</h2><ul><li>Fixed login timeout</li></ul>"
+  - text: "Release notes for FOO v2.3 have been published to Confluence in the ENG space."

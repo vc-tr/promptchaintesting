@@ -1,0 +1,17 @@
+id: author_design_doc
+prompt: "Create a design doc page in Confluence space ARCH for the new caching layer."
+suites: [all, author]
+max_steps: 4
+expected_tools:
+  - confluence_create_page
+success_criteria: "tools_called:confluence_create_page"
+scripted_responses:
+  - text: "Creating a design document for the caching layer."
+    tool_calls:
+      - id: tc1
+        name: confluence_create_page
+        arguments:
+          space: ARCH
+          title: "Design Doc: Caching Layer"
+          body: "<h1>Caching Layer Design</h1><h2>Goals</h2><p>Reduce P95 latency by 40%.</p><h2>Approach</h2><p>Redis-backed read-through cache with 5-minute TTL.</p>"
+  - text: "Design doc created in the ARCH space."

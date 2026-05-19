@@ -1,0 +1,14 @@
+id: summarize_team_workload
+prompt: "Show me the workload distribution across team members for project FOO."
+suites: [all, summarize]
+max_steps: 6
+expected_tools:
+  - jira_search_issues
+success_criteria: "answer_not_empty"
+scripted_responses:
+  - text: "Let me search for in-progress issues grouped by assignee."
+    tool_calls:
+      - id: tc1
+        name: jira_search_issues
+        arguments: {jql: "project = FOO AND status != Done"}
+  - text: "Team workload for FOO:\n- Alice: 8 issues (3 P1)\n- Bob: 5 issues (1 P1)\n- Carol: 6 issues (0 P1)\n- Unassigned: 3 issues\nAlice has the heaviest load, consider rebalancing P1s."

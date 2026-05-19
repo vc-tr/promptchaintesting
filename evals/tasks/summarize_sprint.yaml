@@ -1,0 +1,14 @@
+id: summarize_sprint
+prompt: "Summarize the current sprint status for project FOO — how many issues are open, in progress, and done."
+suites: [all, smoke, summarize]
+max_steps: 6
+expected_tools:
+  - jira_search_issues
+success_criteria: "answer_contains:FOO"
+scripted_responses:
+  - text: "Let me search for all issues in the current sprint."
+    tool_calls:
+      - id: tc1
+        name: jira_search_issues
+        arguments: {jql: "project = FOO AND sprint in openSprints()"}
+  - text: "Sprint summary for FOO:\n- Open: 4 issues\n- In Progress: 6 issues\n- Done: 12 issues\nTotal: 22 issues, 55% completion rate."

@@ -1,0 +1,23 @@
+id: author_postmortem
+prompt: "Write a postmortem page for incident INC-42, referencing Jira issue FOO-99."
+suites: [all, author]
+max_steps: 8
+expected_tools:
+  - jira_get_issue
+  - confluence_create_page
+success_criteria: "tools_called:jira_get_issue,confluence_create_page"
+scripted_responses:
+  - text: "Let me get the details of the incident issue."
+    tool_calls:
+      - id: tc1
+        name: jira_get_issue
+        arguments: {key: "FOO-99"}
+  - text: "Creating the postmortem page."
+    tool_calls:
+      - id: tc2
+        name: confluence_create_page
+        arguments:
+          space: ENG
+          title: "Postmortem: INC-42"
+          body: "<h1>Postmortem: INC-42</h1><h2>Summary</h2><p>Payment service outage caused by database connection pool exhaustion.</p><h2>Timeline</h2><p>14:00 - Alert fired</p><h2>Root Cause</h2><p>Connection leak in v2.2 release.</p>"
+  - text: "Postmortem for INC-42 has been created in Confluence with timeline, root cause, and action items."

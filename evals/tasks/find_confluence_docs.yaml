@@ -1,0 +1,14 @@
+id: find_confluence_docs
+prompt: "Search Confluence for all pages about authentication in the ENG space."
+suites: [all, summarize]
+max_steps: 4
+expected_tools:
+  - confluence_search_pages
+success_criteria: "tools_called:confluence_search_pages"
+scripted_responses:
+  - text: "Searching for auth-related pages."
+    tool_calls:
+      - id: tc1
+        name: confluence_search_pages
+        arguments: {cql: "type=page AND space=ENG AND text~\"authentication\""}
+  - text: "Found 4 pages about authentication in ENG:\n1. Auth Architecture Overview\n2. OAuth2 Integration Guide\n3. SSO Setup Runbook\n4. Auth Service Postmortem"

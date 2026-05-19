@@ -1,0 +1,26 @@
+id: cross_issue_to_doc
+prompt: "Read Jira issue BAR-77, then find and update the related Confluence doc with the latest status."
+suites: [all, cross]
+max_steps: 10
+expected_tools:
+  - jira_get_issue
+  - confluence_search_pages
+  - confluence_update_page
+success_criteria: "tools_called:jira_get_issue,confluence_search_pages"
+scripted_responses:
+  - text: "Getting issue details."
+    tool_calls:
+      - id: tc1
+        name: jira_get_issue
+        arguments: {key: "BAR-77"}
+  - text: "Searching for related documentation."
+    tool_calls:
+      - id: tc2
+        name: confluence_search_pages
+        arguments: {cql: "type=page AND text~\"BAR-77\""}
+  - text: "Updating the doc with current status."
+    tool_calls:
+      - id: tc3
+        name: confluence_update_page
+        arguments: {page_id: "789", body: "<h1>BAR-77 Tracking</h1><p>Status: In Progress. ETA: next sprint.</p>"}
+  - text: "Updated the tracking doc for BAR-77 with the latest status from Jira."

@@ -1,0 +1,14 @@
+id: triage_unassigned
+prompt: "Find unassigned high-priority issues in project BAR and suggest assignees."
+suites: [all, triage]
+max_steps: 6
+expected_tools:
+  - jira_search_issues
+success_criteria: "tools_called:jira_search_issues"
+scripted_responses:
+  - text: "Searching for unassigned high-priority issues."
+    tool_calls:
+      - id: tc1
+        name: jira_search_issues
+        arguments: {jql: "project = BAR AND priority in (P1, P2) AND assignee is EMPTY"}
+  - text: "Found 5 unassigned high-priority issues in BAR. Recommended assignees based on component ownership: BAR-201 → Alice (auth), BAR-205 → Bob (payments)."

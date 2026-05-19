@@ -1,0 +1,14 @@
+id: triage_transition_done
+prompt: "Move issue FOO-50 to Done status."
+suites: [all, triage]
+max_steps: 4
+expected_tools:
+  - jira_transition_issue
+success_criteria: "tools_called:jira_transition_issue"
+scripted_responses:
+  - text: "I'll transition FOO-50 to Done."
+    tool_calls:
+      - id: tc1
+        name: jira_transition_issue
+        arguments: {key: "FOO-50", transition_name: "Done"}
+  - text: "Successfully transitioned FOO-50 to Done."

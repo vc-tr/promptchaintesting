@@ -1,0 +1,20 @@
+id: triage_p1_bugs
+prompt: "Find all P1 bugs in project FOO and label them as 'triaged'."
+suites: [all, smoke, triage]
+max_steps: 6
+expected_tools:
+  - jira_search_issues
+  - jira_get_issue
+success_criteria: "tools_called:jira_search_issues"
+scripted_responses:
+  - text: "I'll search for P1 bugs in FOO."
+    tool_calls:
+      - id: tc1
+        name: jira_search_issues
+        arguments: {jql: "project = FOO AND priority = P1 AND type = Bug"}
+  - text: "Let me check the details of each issue."
+    tool_calls:
+      - id: tc2
+        name: jira_get_issue
+        arguments: {key: "FOO-101"}
+  - text: "Found 3 P1 bugs in project FOO. All have been reviewed and labeled as triaged: FOO-101, FOO-102, FOO-103."

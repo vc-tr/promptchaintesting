@@ -1,0 +1,23 @@
+id: cross_bug_summary_page
+prompt: "Summarize open P1 bugs in project FOO and draft a Confluence page with the summary."
+suites: [all, smoke, cross]
+max_steps: 8
+expected_tools:
+  - jira_search_issues
+  - confluence_create_page
+success_criteria: "tools_called:jira_search_issues,confluence_create_page"
+scripted_responses:
+  - text: "Searching for P1 bugs."
+    tool_calls:
+      - id: tc1
+        name: jira_search_issues
+        arguments: {jql: "project = FOO AND priority = P1 AND type = Bug AND status != Done"}
+  - text: "Creating summary page."
+    tool_calls:
+      - id: tc2
+        name: confluence_create_page
+        arguments:
+          space: ENG
+          title: "FOO P1 Bug Summary"
+          body: "<h1>P1 Bug Summary</h1><table><tr><th>Key</th><th>Summary</th><th>Status</th></tr><tr><td>FOO-101</td><td>Login fails on Safari</td><td>Open</td></tr></table>"
+  - text: "Created a Confluence page summarizing 3 open P1 bugs in FOO."

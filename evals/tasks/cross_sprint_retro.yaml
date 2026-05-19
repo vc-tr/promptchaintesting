@@ -1,0 +1,23 @@
+id: cross_sprint_retro
+prompt: "Generate a sprint retrospective page based on completed and carried-over issues in project FOO."
+suites: [all, cross]
+max_steps: 8
+expected_tools:
+  - jira_search_issues
+  - confluence_create_page
+success_criteria: "tools_called:jira_search_issues,confluence_create_page"
+scripted_responses:
+  - text: "Searching for sprint issues."
+    tool_calls:
+      - id: tc1
+        name: jira_search_issues
+        arguments: {jql: "project = FOO AND sprint in openSprints()"}
+  - text: "Creating retro page."
+    tool_calls:
+      - id: tc2
+        name: confluence_create_page
+        arguments:
+          space: ENG
+          title: "Sprint 14 Retrospective"
+          body: "<h1>Sprint 14 Retro</h1><h2>Completed (12)</h2><p>Major features shipped.</p><h2>Carried Over (4)</h2><p>FOO-88, FOO-92 need design input.</p>"
+  - text: "Sprint retrospective page created with completion stats and carryover analysis."

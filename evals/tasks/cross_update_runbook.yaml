@@ -1,0 +1,26 @@
+id: cross_update_runbook
+prompt: "Read the existing runbook page (ID 456) and update it with the latest on-call rotation from Jira project OPS."
+suites: [all, cross]
+max_steps: 8
+expected_tools:
+  - confluence_get_page
+  - jira_search_issues
+  - confluence_update_page
+success_criteria: "tools_called:confluence_get_page,jira_search_issues"
+scripted_responses:
+  - text: "Fetching the current runbook."
+    tool_calls:
+      - id: tc1
+        name: confluence_get_page
+        arguments: {page_id: "456"}
+  - text: "Searching for on-call rotation tasks."
+    tool_calls:
+      - id: tc2
+        name: jira_search_issues
+        arguments: {jql: "project = OPS AND labels = oncall-rotation"}
+  - text: "Updating the runbook."
+    tool_calls:
+      - id: tc3
+        name: confluence_update_page
+        arguments: {page_id: "456", body: "<h1>Runbook</h1><h2>On-Call Rotation</h2><p>Week 1: Alice, Week 2: Bob</p>"}
+  - text: "Runbook page updated with the latest on-call rotation."

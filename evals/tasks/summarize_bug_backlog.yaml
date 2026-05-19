@@ -1,0 +1,14 @@
+id: summarize_bug_backlog
+prompt: "Give me a summary of the open bug backlog for project BAR — group by priority."
+suites: [all, summarize]
+max_steps: 6
+expected_tools:
+  - jira_search_issues
+success_criteria: "answer_contains:bug"
+scripted_responses:
+  - text: "Searching for open bugs in BAR."
+    tool_calls:
+      - id: tc1
+        name: jira_search_issues
+        arguments: {jql: "project = BAR AND type = Bug AND status != Done"}
+  - text: "Bug backlog for BAR:\n- P1 (Critical): 2 bugs\n- P2 (High): 5 bugs\n- P3 (Medium): 8 bugs\n- P4 (Low): 3 bugs\nTotal: 18 open bugs. P1 bugs need immediate attention."

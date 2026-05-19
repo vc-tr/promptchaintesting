@@ -1,0 +1,18 @@
+id: create_bug_report
+prompt: "Create a new P1 bug in project FOO: 'Payment processing fails for amounts over $10,000'."
+suites: [all, triage]
+max_steps: 4
+expected_tools:
+  - jira_create_issue
+success_criteria: "tools_called:jira_create_issue"
+scripted_responses:
+  - text: "Creating the bug report."
+    tool_calls:
+      - id: tc1
+        name: jira_create_issue
+        arguments:
+          project: FOO
+          summary: "Payment processing fails for amounts over $10,000"
+          description: "Users report that payment transactions exceeding $10,000 fail with a timeout error. Affects production since v2.2 release."
+          issue_type: Bug
+  - text: "Created FOO-150: Payment processing fails for amounts over $10,000."
