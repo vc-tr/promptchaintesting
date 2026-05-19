@@ -1,273 +1,123 @@
-# n8n OpenAI Prompt Chain Demo
+# Atlassian Agent
 
-This demo shows how to create an interactive prompt chain using n8n and OpenAI API. You can have a continuous conversation with the AI where each response builds on the previous context.
+A tool-using LLM agent for Jira and Confluence, with an eval harness.
 
-## Features
+The agent uses a **ReAct loop** (plan → tool → observe → repeat) to complete
+tasks like triaging bugs, summarizing sprints, and drafting Confluence pages.
+It supports **Claude** (default), **OpenAI**, and **Ollama** as LLM providers
+behind a single `LLMClient` interface.
 
--  **Prompt Chaining**: Maintain conversation context across multiple exchanges
--  **OpenAI Integration**: Uses your own OpenAI model's API key for intelligent responses
--  **Webhook API**: RESTful interface for easy integration
--  **Interactive Client**: Python client for testing and demonstration
--  **Docker Setup**: Easy deployment with Docker Compose
+## Architecture
 
-## Quick Start
+```
+┌─────────────┐     ┌──────────────┐     ┌────────────────┐
+│   CLI / UI   │────▶│  Agent Loop   │────▶│   LLM Client   │
+│  (cli.py)    │     │  (agent.py)   │     │ Claude/OpenAI/  │
+└─────────────┘     │               │     │   Ollama        │
+                    │  plan → tool  │     └────────────────┘
+                    │  → observe    │
+                    │  → repeat     │
+                    └──────┬───────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+        ┌──────────┐ ┌──────────┐ ┌──────────┐
+        │   Jira   │ │Confluence│ │MCP Bridge│
+        │  Tools   │ │  Tools   │ │  (any    │
+        │          │ │          │ │  server) │
+        └──────────┘ └──────────┘ └──────────┘
+```
 
-### Prerequisites
-
-- Docker and Docker Compose installed
-- OpenAI API key
-- Python 3.7+ (for the test client)
-
-### 1. Setup
-
-Clone and navigate to the project directory:
+## Quickstart
 
 ```bash
-git clone <repository-url>
-cd promptchaintesting
+# Install with uv
+uv sync --extra dev
+
+# Set credentials
+export ANTHROPIC_API_KEY=sk-...
+export ATLASSIAN_URL=https://your-site.atlassian.net
+export ATLASSIAN_EMAIL=you@example.com
+export ATLASSIAN_TOKEN=your-api-token
+
+# Run the agent
+python -m atlassian_agent.cli "summarize open P1 bugs in project FOO and draft a Confluence page"
+
+# Run tests
+uv run pytest -x -v
+
+# Run eval suite (fake LLM, no credentials needed)
+uv run python -m evals.runner --suite smoke --provider fake
 ```
 
-### 2. Configure OpenAI API
+## What It Does
 
-You have two options for configuring your OpenAI API key:
+- **Triage**: Search, label, and transition Jira issues
+- **Summarize**: Sprint status, bug backlogs, team workload
+- **Author**: Release notes, postmortems, design docs on Confluence
+- **Cross-tool**: Read from Jira → write to Confluence in one flow
 
-**Option A: Environment Variables (Recommended for automation)**
-```bash
-# Create .env file (or it will be created automatically)
-echo "OPENAI_API_KEY=your_actual_api_key_here" > .env
+## Add a Tool
+
+1. Create a class extending `Tool` in `src/atlassian_agent/tools/`
+2. Implement `name`, `description`, `parameters_schema`, and `run()`
+3. Register it in `cli.py` or pass it to `Agent(tools=[...])`
+
+Alternatively, use `MCPRemoteBridge` or `MCPStdioBridge` to wrap any MCP
+server's tools automatically.
+
+## Add an Eval Task
+
+Create a YAML file in `evals/tasks/`:
+
+```yaml
+id: my_task
+prompt: "Do something with Jira and Confluence"
+suites: [all, smoke]
+max_steps: 8
+expected_tools: [jira_search_issues, confluence_create_page]
+success_criteria: "tools_called:jira_search_issues,confluence_create_page"
+scripted_responses:
+  - text: "Searching..."
+    tool_calls:
+      - id: tc1
+        name: jira_search_issues
+        arguments: {jql: "project = FOO"}
+  - text: "Done — found and documented the results."
 ```
 
-**Option B: Manual Configuration in n8n UI**
-- You can configure credentials directly in the n8n interface after startup
+## Eval Results
 
-### 3. Start n8n
-
-```bash
-docker-compose up -d
-```
-
-This will start n8n on `http://localhost:5678`
-
-### 4. Setup n8n Workflow
-
-1. Open n8n in your browser: `http://localhost:5678`
-2. Login with username: `admin`, password: `password`
-3. Import the workflow:
-   - Go to "Workflows" → "Import from File"
-   - Select `workflows/prompt_chain_demo.json`
-4. Configure OpenAI credentials (if not using environment variables):
-   - **If you used Option A (environment variables)**: The workflow should automatically use your API key
-   - **If you used Option B (manual)**: Click on the "OpenAI Chat" node and add your credentials manually
-5. Save and activate the workflow
-
-### 5. Test the Demo
-
-Install Python dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-Start the interactive chat:
-
-```bash
-python test_client.py
-```
-
-Or send a single message:
-
-```bash
-python test_client.py "Hello, can you help me understand how this prompt chain works?"
-```
-
-## Environment Variables vs Manual Configuration
-
-### Why Use Environment Variables?
-
-**Environment Variables (Option A) Benefits:**
-- ✅ **Automation-friendly**: Perfect for CI/CD, deployments, and scaling
-- ✅ **Version control safe**: Keep secrets out of your workflow files
-- ✅ **Team collaboration**: Each developer can use their own API key
-- ✅ **Docker-native**: Follows container best practices
-- ✅ **No manual setup**: Credentials auto-populate in n8n
-
-**Manual Configuration (Option B) Benefits:**
-- ✅ **Quick testing**: Good for one-off experiments
-- ✅ **Visual confirmation**: See credentials directly in the UI
-- ✅ **Fine-grained control**: Set different credentials per workflow
-
-### How Environment Variables Work
-
-When you set `OPENAI_API_KEY` in your `.env` file:
-1. Docker Compose loads it into the n8n container
-2. n8n can automatically use it for OpenAI nodes
-3. No manual credential configuration needed in the UI
-4. API key stays secure and separate from workflow configuration
-
-## How It Works
-
-### Workflow Overview
-
-The n8n workflow consists of these nodes:
-
-1. **Webhook** - Receives HTTP POST requests with user messages
-2. **Parse Input** - Extracts message and conversation context
-3. **Build Context** - Constructs the full conversation history
-4. **OpenAI Chat** - Sends the conversation to OpenAI API
-5. **Format Response** - Processes the AI response
-6. **Respond** - Returns formatted response with continuation instructions
-
-### API Usage
-
-Send POST requests to `http://localhost:5678/webhook/chat` with:
-
-```json
-{
-  "message": "Your message here",
-  "conversation_history": "Previous conversation context (optional)"
-}
-```
-
-Response format:
-
-```json
-{
-  "success": true,
-  "conversation_id": "conversation_identifier",
-  "response": "AI response text",
-  "conversation_history": "Full updated conversation",
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "tokens_used": 150,
-  "continue_url": "http://localhost:5678/webhook/chat",
-  "instructions": "How to continue the conversation"
-}
-```
-
-### Example Conversation Flow
-
-1. **First message**:
-   ```bash
-   curl -X POST http://localhost:5678/webhook/chat \
-     -H "Content-Type: application/json" \
-     -d '{"message": "Hello, what can you help me with?"}'
-   ```
-
-2. **Continue conversation**:
-   ```bash
-   curl -X POST http://localhost:5678/webhook/chat \
-     -H "Content-Type: application/json" \
-     -d '{
-       "message": "Can you explain quantum computing?",
-       "conversation_history": "User: Hello, what can you help me with?\n\nAssistant: Hello! I can help you with..."
-     }'
-   ```
-
-## Customization
-
-### Modify the AI Behavior
-
-Edit the system prompt in the workflow:
-
-1. Open the workflow in n8n
-2. Click on the "OpenAI Chat" node
-3. Modify the system message content
-4. Save the workflow
-
-### Change the Model
-
-In the "OpenAI Chat" node, you can change:
-- Model (e.g., `gpt-4`, `gpt-3.5-turbo`)
-- Temperature (0.0 to 1.0)
-- Max tokens
-- Other OpenAI parameters
-
-### Add Memory/Persistence
-
-To add persistent conversation storage:
-
-1. Add a database node (MongoDB, PostgreSQL, etc.)
-2. Store conversation history with unique IDs
-3. Retrieve context before sending to OpenAI
-4. Update the stored conversation after each response
-
-## Troubleshooting
-
-### Common Issues
-
-1. **n8n not accessible**: Check if Docker is running and port 5678 is available
-2. **OpenAI API errors**: Verify your API key is correct and has sufficient credits
-3. **Webhook not responding**: Ensure the workflow is active and saved
-4. **Python client errors**: Install dependencies with `pip install -r requirements.txt`
-
-### Debug Mode
-
-To see detailed logs:
+Run the full suite:
 
 ```bash
-docker-compose logs -f n8n
+uv run python -m evals.runner --suite all --provider fake --repeats 3
 ```
 
-### Reset Everything
+Reports are generated in `evals/reports/<timestamp>/report.md`.
 
-To start fresh:
+## Project Structure
 
-```bash
-docker-compose down -v
-docker-compose up -d
+```
+src/atlassian_agent/       # Main package
+  agent.py                 # ReAct loop
+  cli.py                   # CLI entrypoint
+  tracing.py               # SQLite trace logger
+  llm/                     # Provider-agnostic LLM layer
+  tools/                   # Jira, Confluence, MCP bridge
+evals/                     # Eval harness
+  tasks/                   # 15 YAML task definitions
+  scorers.py               # Scoring functions
+  runner.py                # Eval runner + report generator
+tests/                     # pytest suite
+legacy/                    # Original n8n demo (preserved)
 ```
 
-## Advanced Usage
+## Legacy
 
-### Integration Examples
-
-**Use with Slack**:
-- Add Slack nodes to receive/send messages
-- Replace webhook with Slack trigger
-
-**Use with Discord**:
-- Add Discord webhook integration
-- Build a Discord bot interface
-
-**Use with Web Interface**:
-- Create a simple web form
-- Send AJAX requests to the webhook
-
-### Environment Variables Best Practices
-
-**For Development:**
-```bash
-# Copy the example and customize
-cp .env.example .env
-# Edit .env with your actual API key
-vim .env
-```
-
-**For Production:**
-```bash
-# Set environment variables directly
-export OPENAI_API_KEY="your-production-key"
-docker-compose up -d
-```
-
-**For CI/CD:**
-```bash
-# Use secrets management
-echo "$OPENAI_API_KEY_SECRET" > .env
-docker-compose up -d
-```
-
-### Scaling Considerations
-
-- Use n8n cloud for production
-- Implement rate limiting
-- Add conversation cleanup
-- Use vector databases for long-term memory
-- Store API keys in proper secret management systems
-
-## Contributing
-
-Feel free to submit issues and enhancement requests!
+The original n8n + OpenAI prompt-chain demo lives in [`legacy/`](legacy/).
+See [`legacy/README.md`](legacy/README.md) for setup instructions.
 
 ## License
 
-This project is open source and available under the MIT License. 
+MIT
